@@ -1,5 +1,6 @@
 using Telegram.Bot;
 using Webhook.Controllers;
+using static Webhook.Controllers.Extenstions.ConfigurationSetting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,7 @@ builder.Services.AddHttpClient("tgwebhook").RemoveAllLoggers().AddTypedClient<IT
     httpClient => new TelegramBotClient(botConfigSection.Get<BotConfiguration>()!.BotToken, httpClient));
 builder.Services.AddSingleton<Webhook.Controllers.Services.UpdateHandler>();
 builder.Services.ConfigureTelegramBotMvc();
+builder.Services.Configure<REDIS>(builder.Configuration.GetSection(nameof(REDIS)));
 
 builder.Services.AddControllers();
 

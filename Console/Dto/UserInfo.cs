@@ -8,15 +8,17 @@ namespace Dto
 {
     public class UserInfo
     {
+        public string SurName { get; set; }
         public string UserName { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
         public DateTime BirthDay { get; set; }
         public decimal Balance { get; set; }
+        public string ReferralCode { get; set; }
     }
 
-    public class Result
+    public class ResultGame
     {
         public bool Success { get; set; }
         public Game result { get; set; }
@@ -82,6 +84,7 @@ namespace Dto
         public string game_code { get; set; }
         public string game_name_en { get; set; }
         public string platform { get; set; }
+        public string imageURL { get; set; }
     }
 
     public class Platform
@@ -90,4 +93,59 @@ namespace Dto
         public string platform_name { get; set; }
     }
 
+    public class Login
+    {
+        public string UserName { get; set; }
+        public string Token { get; set; }
+    }
+
+    public class ResultCommon
+    {
+        public bool Success { get; set; }
+        public ErrorInfo Error { get; set; }
+    }
+
+    public class ErrorInfo
+    {
+        public string Message { get; set; }
+        public int Code { get; set; }
+    }
+
+    public class ResultLogin : ResultCommon
+    {
+        public Login Result { get; set; }
+    }
+
+    public class ResultProfile : ResultCommon
+    {
+        public UserInfo Result { get; set; }
+    }
+
+    public class Bank
+    {
+        public int Id { get; set; }
+        public string AccountName { get; set; }
+        public string AccountNumber { get; set; }
+        public string BankName { get; set; }
+        public string BankShortName { get; set; }
+        public string DisplayName { get; set; }
+        public decimal? MaximumDeposit { get; set; }
+        public decimal? MinimumDeposit { get; set; }
+    }
+
+    public class ListBank
+    {
+        public List<Bank> AgentBank { get; set; }
+        public List<Bank> PlayerBank { get; set; }
+    }
+
+    public class ResultBank : ResultCommon
+    {
+        public ListBank Result { get; set; }
+    }
+
+    public class ResultGameDetail : ResultCommon
+    {
+        public string Result { get; set; }
+    }
 }
