@@ -1,28 +1,35 @@
 using Dto;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 using RedisCache;
 using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Net.Mail;
+using System.Security.Cryptography;
 using System.Text;
+using System.Web;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 #region Declare
+
 var tokenTelegram = Environment.GetEnvironmentVariable("TOKEN");
+var a = GeneratePassword(12);
 using var cts = new CancellationTokenSource();
-tokenTelegram ??= "7253554971:AAHEQwONJ3rCyNl0dv1nPhhz4GwNRydvhCI";
+tokenTelegram ??= "5013030663:AAE3Aq258oAtDaSQQ4UZrdWEf74mI-6I_2g";
 var bot = new TelegramBotClient(tokenTelegram, cancellationToken: cts.Token);
 var helper = new Helper.HelperRestSharp();
+var profile = await helper.CallApiAsync("https://app.my388.com/api/services/app/account/GetProfile", RestSharp.Method.Post, authorize: "gfdgdf");
+var profileDto = JsonConvert.DeserializeObject<ResultProfile>(profile);
 var me = await bot.GetMeAsync();
 var domain = "app.my388.com";
 string info = null;
 ResultInfo dto = null;
-var token = "";
+var token = "HhwiE7utr_QCbzKLt1K5AttJLmL6p3AeH4zZBEehZiiUyKrLcDi-hfLUjUlXLbdea5RFSG-4-x6f5IFmZwRgGp99cPahoBM9arsyRI-m3u3PGlAXBKlY6AovoyiTrh3VRnN3bICEcR4Vj1YkTJwxW6-XLPFdb_8xzmbGSmpN_-7ZHCLU8JXAO_kXWBY0UFP3v4DRIUy1YAz2vbT0sipB-uQIOhctxbCwAzlzV5Md-8EEmL-_mxKQF87G8rwcS0iWT40xCv8qmaJSWzwW77hl2STk52teHIDGGNSuuNQ7uVFX2vQ8u7ZXgS48NHqNJXYZ7thgpQjnAjUr2AiDLNk4dGkU7gTXqonmaUMus1dNWZFcDXg2miqiwswwKUZjY05Qokn9XoHNliTnVL90QVCCmwkv99i0NUJ7jb3h8ltB8cTDc-XCUKPaNKjAgApUTS46jNti1GiVgQ0hc1rYvCrKODSKXv7gDlwVqLpaahZhY56wmIFkCG_4JSbMF_wO5Ovb7vGx8YKAvYxl7UGwRsPKGw";
 var listToken = new Dictionary<string, string>();
 ConcurrentDictionary<string, string> userStates = new ConcurrentDictionary<string, string>();
 bot.StartReceiving(OnUpdate, OnError);
@@ -40,6 +47,7 @@ var gameTypes = new Dictionary<string, string>
     };
 
 #endregion
+
 
 Console.WriteLine($"@{me.Username} is running... Press Escape to terminate");
 while (Console.ReadKey(true).Key != ConsoleKey.Escape) ;
@@ -234,25 +242,16 @@ async Task OnCommand(string command, string args, Message msg)
                 break;
 
             case "/test":
-
-                //    List<List<InlineKeyboardButton>> buttons =
-                //[
-                //    [
-                //        InlineKeyboardButton.WithWebApp("Play", "https://test.club388.com/auth/player/loginAndPlayGame?token=W1IuEb0kCA1fFJXacxArShxASNz9B3MUBWwas41t2fldrjJtZAqsQnHRHYjzn8FiPOBYulY1XI-_jJMTSp4sKDK_GdSsHgMT_aCEy5K-7Y85l9nNlfoQRQDd_7OkLNhXT8IM9MVOm2V0OZzEElmpkXCYV9j5rn5AigGFnOUIhghWJgUBUXXIXspCUh-BhqvkAnKC60fr8dDCOZsyRjWVgQ")
-                //    ],
-                //];
-                //    await bot.SendChatActionAsync(msg.Chat, ChatAction.UploadPhoto);
-                //    await Task.Delay(1000);
-                //    await using (var fileStream = new FileStream("C:\\Users\\wood\\Downloads\\photo_2024-07-29_17-20-52.jpg", FileMode.Open, FileAccess.Read))
-                //    {
-                //        await bot.SendPhotoAsync(msg.Chat, fileStream, caption: "Game name: dhfgh", replyMarkup: new InlineKeyboardMarkup(buttons));
-                //    }
-                //ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup(buttons)
-                //{
-                //    ResizeKeyboard = true,
-                //    OneTimeKeyboard = true
-                //};
-                //await bot.SendTextMessageAsync(msg.Chat, "lk", replyMarkup: keyboard);
+                await bot.SendPhotoAsync(msg.Chat, "https://pasystem.s3.ap-southeast-1.amazonaws.com/telebot/banner.png");
+                var html = new StringBuilder();
+                html.AppendLine("Welcome " + msg.From.FirstName + " " + msg.From.LastName + " to the first licensed Casino Telegram channel brought to you by https://staging.my388.com!");
+                html.AppendLine();
+                html.AppendLine("💥Simply Click \"Sign In/Sign Up\" and enjoy great experiences at 388kh Telegram Casino Channel. 🚀");
+                html.AppendLine();
+                html.AppendLine("Need support or have any questions?");
+                html.AppendLine("👋CS Telegram: @PAS_SupportB (https://t.me/PAS_SupportB)");
+                html.Append("👉🏻https://t.me/dhdemo_5_bot");
+                await bot.SendTextMessageAsync(msg.Chat, html.ToString());
                 break;
         }
     }
@@ -388,8 +387,13 @@ Referral Code: {profileDto.Result.ReferralCode}
             //{
             //    InlineKeyboardButton.WithCallbackData("Add Bank", "BANKACCOUNT/ADDBANK")
             //});
-
-            await bot.SendTextMessageAsync(msg.Chat, message, parseMode: ParseMode.Html);
+            List<List<InlineKeyboardButton>> buttons =
+            [
+                [
+                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                ],
+            ];
+            await bot.SendTextMessageAsync(msg.Chat, message, parseMode: ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(buttons));
         }
         else
         {
@@ -449,30 +453,57 @@ async Task OnCommandWallet(Message msg, int numberQuery = 0)
 #endregion
 
 #region Game => lấy ở trang chủ web
-async Task OnCommandGame(Message msg, string platform = "", string gametype = "", string type = "")
+async Task OnCommandGame(Message msg, string platform = "", string gametype = "", string type = "", bool isLive = false)
 {
-    var game = await helper.CallApiAsync("https://" + domain + "/api/MPS/ByGameTypeAndPlatform", RestSharp.Method.Post, new { platform = platform, gametype = gametype, tenancyName = "dhdemo" });
+    var game = await helper.CallApiAsync("https://app.my388.com/api/MPS/ByGameTypeAndPlatform", RestSharp.Method.Post, new { platform = isLive ? "" : platform, gametype = isLive ? "" : gametype, status = type.Contains("games") ? "HOT" : "", tenancyName = "dhdemo" });
     var gameDto = JsonConvert.DeserializeObject<ResultGame>(game);
     List<List<InlineKeyboardButton>> buttons;
     if (type.Contains("platforms"))
     {
-        var platforms = gameDto.result.gameType.FirstOrDefault(x => x.game_type == type.Split("/").LastOrDefault()).platforms;
-        buttons = ConvertToInlineKeyboard(platforms.ToDictionary(x => "GAME/PLATFORM_&_" + type.Split("/").LastOrDefault() + "_*_" + x.platform, x => x.platform_name), buttonsPerRow: 2);
-        await bot.SendTextMessageAsync(msg.Chat.Id, "Provider 🌟", replyMarkup: new InlineKeyboardMarkup(buttons));
+        if (gametype == "LIVE" || gametype == "LIVEARENA" || gametype == "SPORTS" || gametype == "LOTTERY")
+        {
+            game = await helper.CallApiAsync("https://app.my388.com/api/MPS/ByGameTypeAndPlatform", RestSharp.Method.Post, new { platform = isLive ? "" : platform, gametype = gametype, status = type.Contains("games") ? "HOT" : "", tenancyName = "dhdemo" });
+            gameDto = JsonConvert.DeserializeObject<ResultGame>(game);
+            RedisCacher.SetObject("LISTGAME_" + bot.BotId, gameDto, 1440);
+            buttons = ConvertToInlineKeyboard(gameDto.result.gameList.Take(10).ToDictionary(x => "GAME/LIST_&_" + x.game_code + "_*_" + x.platform + "_*_" + x.rtp, x => "🔥" + x.game_name_en), buttonsPerRow: 2);
+            buttons.Add(new List<InlineKeyboardButton>
+                {
+                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                });
+            await bot.SendTextMessageAsync(msg.Chat.Id, "Game list (" + gameDto.result.gameList.FirstOrDefault().game_type + " - " + gameDto.result.gameList.FirstOrDefault().platform + ")", replyMarkup: new InlineKeyboardMarkup(buttons));
+        }
+        else
+        {
+            var platforms = gameDto.result.gameType.FirstOrDefault(x => x.game_type == type.Split("/").LastOrDefault()).platforms;
+            buttons = ConvertToInlineKeyboard(platforms.ToDictionary(x => "GAME/PLATFORM_&_" + type.Split("/").LastOrDefault() + "_*_" + x.platform, x => "🔹" + x.platform_name), buttonsPerRow: 2);
+            buttons.Add(new List<InlineKeyboardButton>
+                {
+                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                });
+            await bot.SendTextMessageAsync(msg.Chat.Id, "List provider (" + type.Split("/").LastOrDefault() + ")", replyMarkup: new InlineKeyboardMarkup(buttons));
+        }
     }
     else if (type.Contains("games"))
     {
-        RedisCacher.SetObject("LISTGAME_" + msg.Chat.Id, gameDto, 1440);
-        buttons = ConvertToInlineKeyboard(gameDto.result.gameList.ToDictionary(x => "GAME/LIST_&_" + x.game_code + "_*_" + x.platform, x => x.game_name_en), buttonsPerRow: 2);
-        await bot.SendTextMessageAsync(msg.Chat.Id, gametype, replyMarkup: new InlineKeyboardMarkup(buttons));
+        RedisCacher.SetObject("LISTGAME_" + bot.BotId, gameDto, 1440);
+        buttons = ConvertToInlineKeyboard(gameDto.result.gameList.Take(10).ToDictionary(x => "GAME/LIST_&_" + x.game_code + "_*_" + x.platform + "_*_" + x.rtp, x => "🔥" + x.game_name_en), buttonsPerRow: 2);
+        buttons.Add(new List<InlineKeyboardButton>
+            {
+                InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+            });
+        await bot.SendTextMessageAsync(msg.Chat.Id, "Game list (" + gameDto.result.gameList.FirstOrDefault().game_type + " - " + gameDto.result.gameList.FirstOrDefault().platform + ")", replyMarkup: new InlineKeyboardMarkup(buttons));
 
     }
     else
     {
         buttons = ConvertToInlineKeyboard(gameDto.result.gameType.ToDictionary(x => "GAME/TYPE_&_" + x.game_type, x => x.game_type_name), buttonsPerRow: 2);
-        await bot.SendTextMessageAsync(msg.Chat.Id, "Game Type 🌟", replyMarkup: new InlineKeyboardMarkup(buttons));
+        buttons.Add(new List<InlineKeyboardButton>
+            {
+                InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+            });
+        await bot.SendTextMessageAsync(msg.Chat.Id, "Game Type", replyMarkup: new InlineKeyboardMarkup(buttons));
     }
-
+    await bot.DeleteMessageAsync(msg.Chat, msg.MessageId);
 }
 #endregion
 
@@ -890,10 +921,22 @@ async Task OnCallbackQuery(CallbackQuery callbackQuery)
                 userStates["AccountNumberPlayer_" + chatId] = bankPlayer.AccountNumber;
                 await OnCommandAmountTrans(callbackQuery.Message, "withdraw");
                 break;
+            case "CLOSE":
+                await bot.DeleteMessageAsync(callbackQuery.Message.Chat, Convert.ToInt32(stringSplit.LastOrDefault()));
+                await bot.DeleteMessageAsync(callbackQuery.Message.Chat, callbackQuery.Message.MessageId);
+                break;
             case var value when value == value:
                 if (value.Contains("GAME/TYPE"))
                 {
-                    await OnCommandGame(callbackQuery.Message, type: "platforms/" + stringSplit.LastOrDefault());
+                    var splitString = stringSplit.LastOrDefault().Split("_*_");
+                    var gameType = splitString.FirstOrDefault();
+                    var platform = splitString.LastOrDefault();
+                    var isLive = false;
+                    if (gameType == "LIVE" || gameType == "LIVEARENA" || gameType == "SPORTS" || gameType == "LOTTERY")
+                    {
+                        isLive = true;
+                    }
+                    await OnCommandGame(callbackQuery.Message, platform: isLive ? platform : "", gametype: isLive ? gameType : "", type: "platforms/" + stringSplit.LastOrDefault(), isLive: isLive);
                 }
                 else if (value.Contains("GAME/PLATFORM"))
                 {
@@ -904,12 +947,13 @@ async Task OnCallbackQuery(CallbackQuery callbackQuery)
                 }
                 else if (value.Contains("GAME/LIST"))
                 {
-                    var games = RedisCacher.GetObject<ResultGame>("LISTGAME_" + chatId);
+                    var games = RedisCacher.GetObject<ResultGame>("LISTGAME_" + bot.BotId);
                     var splitString = stringSplit.LastOrDefault().Split("_*_");
-                    var platform = splitString.LastOrDefault();
-                    var gamecode = splitString.FirstOrDefault();
+                    var platform = splitString[1];
+                    var gamecode = splitString[0];
+                    var rtp = splitString[2];
                     var game = games.result.gameList.FirstOrDefault(x => x.game_code == gamecode && x.platform == platform);
-                    await OnCommandDetailGame(callbackQuery.Message, gamecode, platform, game.imageURL, game.game_name_en);
+                    //await OnCommandDetailGame(callbackQuery.Message, gamecode, platform, game.imageURL, game.game_name_en, rtp, game.game_type);
                 }
                 break;
 
@@ -1004,4 +1048,39 @@ string DecompressAndBase64Decode(string input)
             }
         }
     }
+}
+
+string GeneratePassword(int length)
+{
+    const string upperChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const string lowerChars = "abcdefghijklmnopqrstuvwxyz";
+    const string digitChars = "0123456789";
+    const string specialChars = "!@#$%^&*()-_=+<>?";
+
+    Random random = new Random();
+    StringBuilder passwordBuilder = new StringBuilder();
+
+    // Add at least one uppercase letter, one digit, and one special character
+    passwordBuilder.Append(upperChars[random.Next(upperChars.Length)]);
+    passwordBuilder.Append(digitChars[random.Next(digitChars.Length)]);
+    passwordBuilder.Append(specialChars[random.Next(specialChars.Length)]);
+
+    // Fill the rest of the password with random characters from all sets
+    string allChars = upperChars + lowerChars + digitChars + specialChars;
+    for (int i = 3; i < length; i++)
+    {
+        passwordBuilder.Append(allChars[random.Next(allChars.Length)]);
+    }
+
+    // Shuffle the password to avoid predictable positions
+    char[] passwordArray = passwordBuilder.ToString().ToCharArray();
+    for (int i = passwordArray.Length - 1; i > 0; i--)
+    {
+        int j = random.Next(i + 1);
+        var temp = passwordArray[i];
+        passwordArray[i] = passwordArray[j];
+        passwordArray[j] = temp;
+    }
+
+    return new string(passwordArray);
 }

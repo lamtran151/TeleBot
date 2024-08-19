@@ -60,5 +60,22 @@ namespace Webhook.Controllers.Extenstions
         {
             public string CacheConnection { get; set; }
         }
+
+        public static API APIConfig
+        {
+            get
+            {
+                //This works to get file changes.
+                var s = services.GetService(typeof(IOptionsMonitor<API>)) as IOptionsMonitor<API>;
+                API config = s.CurrentValue;
+
+                return config;
+            }
+        }
+
+        public class API
+        {
+            public string Domain { get; set; }
+        }
     }
 }

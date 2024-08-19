@@ -83,8 +83,10 @@ namespace Dto
     {
         public string game_code { get; set; }
         public string game_name_en { get; set; }
+        public string game_type { get; set; }
         public string platform { get; set; }
         public string imageURL { get; set; }
+        public decimal rtp { get; set; }
     }
 
     public class Platform
