@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualBasic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using RedisCache;
 using System.Collections.Concurrent;
 using System.IO.Compression;
@@ -18,11 +19,18 @@ using Telegram.Bot.Types.ReplyMarkups;
 #region Declare
 
 var tokenTelegram = Environment.GetEnvironmentVariable("TOKEN");
+
+
 var a = GeneratePassword(12);
 using var cts = new CancellationTokenSource();
 tokenTelegram ??= "5013030663:AAE3Aq258oAtDaSQQ4UZrdWEf74mI-6I_2g";
 var bot = new TelegramBotClient(tokenTelegram, cancellationToken: cts.Token);
 var helper = new Helper.HelperRestSharp();
+var lang = "my";
+var language = await helper.CallApiAsync("https://app.my388.com/api/Account/GetUserLocalizationConfig?tenancyName=dhdemo&language="+lang, RestSharp.Method.Get);
+var languageDto = JsonConvert.DeserializeObject<ResultLanguage>(language);
+var values = JObject.Parse(languageDto.Result.Values.ToString());
+var bcd = values[lang]["1xDailys"];
 var profile = await helper.CallApiAsync("https://app.my388.com/api/services/app/account/GetProfile", RestSharp.Method.Post, authorize: "gfdgdf");
 var profileDto = JsonConvert.DeserializeObject<ResultProfile>(profile);
 var me = await bot.GetMeAsync();

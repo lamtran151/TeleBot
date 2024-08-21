@@ -33,7 +33,14 @@ public class BotController(IOptions<List<BotConfiguration>> Config) : Controller
         };
         await bot.SetMyCommandsAsync(commands, cancellationToken: ct);
         RedisCacher.SetObject("BOTNAME_" + bot.BotId, botName, 520000);
-        return $"Webhook set to {webhookUrl} - {RedisCacher.GetObject<string>("BOTNAME_"+bot.BotId)}";
+        var domain = ConfigurationSetting.APIConfig.Domain;
+        var helperApi = new HelperRestSharp();
+        var language = await helperApi.CallApiAsync(domain + "/api/Account/GetUserLocalizationConfig?tenancyName=" + botConfig.BotName + "&language=" + botConfig.MainLanguage, RestSharp.Method.Get);
+        var languageDto = JsonConvert.DeserializeObject<ResultLanguage>(language);
+        RedisCacher.SetObject("MAIN_LANGUAGE_" + bot.BotId, languageDto.Result.CurrentCulture.Name, 520000);
+        RedisCacher.SetObject("LIST_LANGUAGE_" + bot.BotId, languageDto.Result.Languages, 520000);
+        RedisCacher.SetObject("TRANSLATE_LANGUAGE_" + bot.BotId, languageDto.Result.Values, 520000);
+        return $"Webhook set to {webhookUrl} - {JsonConvert.SerializeObject(RedisCacher.GetObject<object>("TRANSLATE_LANGUAGE_" + bot.BotId))}";
     }
 
     [HttpPost("webhook/{botName}")]

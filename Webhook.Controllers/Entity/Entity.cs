@@ -145,8 +145,24 @@ namespace Webhook.Controllers.Entity
         public string Frequency { get; set; }
         public object TranslatePromotion { get; set; }
     }
-    
 
-    
-    
+    public class ResultLanguage : Result
+    {
+        public LanguageDto Result { get; set; }
+    }
+
+    public class LanguageDto
+    {
+        public CurrentCulture CurrentCulture { get; set; }
+        public List<CurrentCulture> Languages { get; set; }
+        public object Values { get; set; }
+    }
+
+    public class CurrentCulture
+    {
+        public string Name { get; set; }
+        public string DisplayName { get; set; }
+    }
+
+
 }

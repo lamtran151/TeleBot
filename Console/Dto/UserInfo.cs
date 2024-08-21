@@ -150,4 +150,22 @@ namespace Dto
     {
         public string Result { get; set; }
     }
+
+    public class ResultLanguage : ResultCommon
+    {
+        public LanguageDto Result { get; set; }
+    }
+
+    public class LanguageDto
+    {
+        public CurrentCulture CurrentCulture { get; set; }
+        public List<CurrentCulture> Languages { get; set; }
+        public object Values { get; set; }
+    }
+
+    public class CurrentCulture
+    {
+        public string Name { get; set; }
+        public string DisplayName { get; set; }
+    }
 }

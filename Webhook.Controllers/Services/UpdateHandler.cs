@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Linq;
 using System.Text;
 using Telegram.Bot;
@@ -21,6 +22,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     private static readonly InputPollOption[] PollOptions = ["Hello", "World!"];
     private readonly string TenancyName = RedisCacher.GetObject<string>("BOTNAME_" + bot.BotId);
     private readonly string Domain = ConfigurationSetting.APIConfig.Domain;
+    private readonly object TranslateLanguage = RedisCacher.GetObject<object>("TRANSLATE_LANGUAGE_" + bot.BotId);
     private readonly HelperRestSharp helperApi = new HelperRestSharp();
 
     public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
@@ -73,33 +75,82 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
             }
             command = messageText.Split(" ").FirstOrDefault();
         }
-
-        await (command switch
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
+        if(lang == "en")
         {
-            "/start" => OnCommandSignInSignUp(msg),
-            "/restart" => OnCommandSignInSignUp(msg),
-            "Account" => OnCommandAccount(msg),
-            "History" => OnCommandHistory(msg),
-            "Wallet" => OnCommandWallet(msg),
-            "Games" => OnCommandGame(msg),
-            "Deposit" => OnCommandDeposit(msg),
-            "Withdraw" => OnCommandWithdraw(msg),
-            "Promotion" => OnCommandPromotion(msg),
-            "Setting" => OnCommandSetting(msg),
-            "Back" => OnCommandHome(msg),
-            "Support" => OnCommandSupport(msg),
-            "Language" => OnCommandLanguage(msg),
-            "Login To The Website" => OnCommandWebsite(msg),
-            "Change Password" => OnCommandChangePassword(msg),
-            _ => Usage(msg)
-        });
+            await (command switch
+            {
+                "/start" => OnCommandSignInSignUp(msg),
+                "/restart" => OnCommandSignInSignUp(msg),
+                "Account" => OnCommandAccount(msg),
+                "History" => OnCommandHistory(msg),
+                "Wallet" => OnCommandWallet(msg),
+                "Games" => OnCommandGame(msg),
+                "Deposit" => OnCommandDeposit(msg),
+                "Withdraw" => OnCommandWithdraw(msg),
+                "Promotion" => OnCommandPromotion(msg),
+                "Setting" => OnCommandSetting(msg),
+                "Back" => OnCommandHome(msg),
+                "Support" => OnCommandSupport(msg),
+                "Language" => OnCommandLanguage(msg),
+                "Login To The Website" => OnCommandWebsite(msg),
+                "Change Password" => OnCommandChangePassword(msg),
+                _ => Usage(msg)
+            });
+        }
+        else if(lang == "my")
+        {
+            await (command switch
+            {
+                "/start" => OnCommandSignInSignUp(msg),
+                "/restart" => OnCommandSignInSignUp(msg),
+                "အကောင့်" => OnCommandAccount(msg),
+                "History" => OnCommandHistory(msg),
+                "ပိုက်ဆံအိတ်" => OnCommandWallet(msg),
+                "Games" => OnCommandGame(msg),
+                "အပ်ငွေ" => OnCommandDeposit(msg),
+                "ငွေထုတ်မည်။" => OnCommandWithdraw(msg),
+                "ပရိုမိုးရှင်း" => OnCommandPromotion(msg),
+                "ဆက်တင်" => OnCommandSetting(msg),
+                "ရှေ့ပြန်သွားပါ။" => OnCommandHome(msg),
+                "Support" => OnCommandSupport(msg),
+                "ဘာသာစကား" => OnCommandLanguage(msg),
+                "LoginToTheWebsite" => OnCommandWebsite(msg),
+                "စကားဝှက်ကိုပြောင်းရန်" => OnCommandChangePassword(msg),
+                _ => Usage(msg)
+            });
+        }
+        else if (lang == "km")
+        {
+            await (command switch
+            {
+                "/start" => OnCommandSignInSignUp(msg),
+                "/restart" => OnCommandSignInSignUp(msg),
+                "គណនី" => OnCommandAccount(msg),
+                "History" => OnCommandHistory(msg),
+                "Wallet" => OnCommandWallet(msg),
+                "Games" => OnCommandGame(msg),
+                "ដាក់ប្រាក់" => OnCommandDeposit(msg),
+                "ដកប្រាក់" => OnCommandWithdraw(msg),
+                "ប្រូម៉ូសិន" => OnCommandPromotion(msg),
+                "Setting" => OnCommandSetting(msg),
+                "ថយក្រោយ" => OnCommandHome(msg),
+                "Support" => OnCommandSupport(msg),
+                "ភាសា" => OnCommandLanguage(msg),
+                "LoginToTheWebsite" => OnCommandWebsite(msg),
+                "ផ្លាស់ប្តូរពាក្យសម្ងាត់" => OnCommandChangePassword(msg),
+                _ => Usage(msg)
+            });
+        }
     }
 
     #region Sign In/Sign Up
 
     async Task OnCommandSignInSignUp(Message msg)
     {
-        KeyboardButton button = KeyboardButton.WithRequestContact("Sign In/Sign Up");
+        RedisCacher.SetObject("TokenTele_" + msg.Chat.Id, "", 1440);
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
+        KeyboardButton button = KeyboardButton.WithRequestContact(L(TranslateLanguage, lang, "SignIn") + "/"+ L(TranslateLanguage, lang, "SignUp"));
         ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup(button)
         {
             ResizeKeyboard = true,
@@ -122,16 +173,17 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     #region Home
     async Task OnCommandHome(Message msg, string pass = "")
     {
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
         var replyKeyboard = new ReplyKeyboardMarkup(new[]
         {
         //new KeyboardButton[] { "👤 Account" },
         //new KeyboardButton[] { "💰 Wallet", "🎮 Games" },
         //new KeyboardButton[] { "💳 Deposit", "💳 Withdraw" },
         //new KeyboardButton[] { "🎁 Promotion", "⚙️ Setting" }
-         new KeyboardButton[] { "Account", "History" },
-         new KeyboardButton[] { "Wallet", "Games" },
-         new KeyboardButton[] { "Deposit", "Withdraw" },
-         new KeyboardButton[] { "Promotion", "Setting" }
+         new KeyboardButton[] { L(TranslateLanguage, lang, "Account"), L(TranslateLanguage, lang, "History") },
+         new KeyboardButton[] { L(TranslateLanguage, lang, "Wallet"), L(TranslateLanguage, lang, "Games") },
+         new KeyboardButton[] { L(TranslateLanguage, lang, "Deposit"), L(TranslateLanguage, lang, "Withdraw") },
+         new KeyboardButton[] { L(TranslateLanguage, lang, "Promotion"), L(TranslateLanguage, lang, "Setting") }
     })
         {
             ResizeKeyboard = true,
@@ -140,9 +192,9 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
         if (!string.IsNullOrEmpty(pass))
         {
-            await bot.SendTextMessageAsync(chatId: msg.Chat, text: "Your password is " + pass + ", please change new password", replyMarkup: replyKeyboard);
+            await bot.SendTextMessageAsync(chatId: msg.Chat, text: string.Format(L(TranslateLanguage, lang, "YourPasswordIs{0}PleaseChangeNewPassword"), pass) , replyMarkup: replyKeyboard);
         }
-        await bot.SendTextMessageAsync(chatId: msg.Chat, text: "Category", replyMarkup: replyKeyboard);
+        await bot.SendTextMessageAsync(chatId: msg.Chat, text: L(TranslateLanguage, lang, "Category"), replyMarkup: replyKeyboard);
 
     }
     #endregion
@@ -156,6 +208,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
         }
         else
         {
+            var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
             var token = RedisCacher.GetObject<string>("TokenTele_" + msg.Chat.Id);
             var profile = await helperApi.CallApiAsync("" + Domain + "/api/services/app/account/GetProfile", RestSharp.Method.Post, authorize: string.IsNullOrEmpty(token) ? "expired" : token);
             var profileDto = JsonConvert.DeserializeObject<ResultProfile>(profile);
@@ -174,23 +227,23 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
                 }
                 var messageBuilder = new StringBuilder();
 
-                messageBuilder.AppendLine("<b>[Account]</b>");
+                messageBuilder.AppendLine("<b>["+ L(TranslateLanguage, lang, "Account") + "]</b>");
                 messageBuilder.AppendLine();
-                messageBuilder.AppendLine("<b><u>Personal information</u></b>");
-                messageBuilder.AppendLine($"UserName: {profileDto.Result.UserName}");
-                messageBuilder.AppendLine($"UserId: {profileDto.Result.SurName}");
-                messageBuilder.AppendLine($"Name: {profileDto.Result.Name}");
-                messageBuilder.AppendLine($"PhoneNumber: {profileDto.Result.PhoneNumber}");
-                messageBuilder.AppendLine($"Referral Code: {profileDto.Result.ReferralCode}");
+                messageBuilder.AppendLine("<b><u>"+ L(TranslateLanguage, lang, "PersonalInformation") + "</u></b>");
+                messageBuilder.AppendLine($"{L(TranslateLanguage, lang, "UserName")}: {profileDto.Result.UserName}");
+                messageBuilder.AppendLine($"{L(TranslateLanguage, lang, "UserId")}: {profileDto.Result.SurName}");
+                messageBuilder.AppendLine($"{L(TranslateLanguage, lang, "Name")}: {profileDto.Result.Name}");
+                messageBuilder.AppendLine($"{L(TranslateLanguage, lang, "Mobile")}: {profileDto.Result.PhoneNumber}");
+                messageBuilder.AppendLine($"{L(TranslateLanguage, lang, "ReferralCode")}: {profileDto.Result.ReferralCode}");
                 messageBuilder.AppendLine();
-                messageBuilder.AppendLine("<b><u>Bank information</u></b>");
+                messageBuilder.AppendLine("<b><u>"+ L(TranslateLanguage, lang, "BankInformation") + "</u></b>");
                 messageBuilder.AppendLine(htmlBank.ToString());
 
                 string message = messageBuilder.ToString();
                 List<List<InlineKeyboardButton>> buttons =
             [
                 [
-                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                    InlineKeyboardButton.WithCallbackData(L(TranslateLanguage, lang, "Close"), "CLOSE_&_"+msg.MessageId)
                 ],
             ];
                 await bot.SendTextMessageAsync(msg.Chat, message, parseMode: ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(buttons));
@@ -227,6 +280,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
         }
         else
         {
+            var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
             var token = RedisCacher.GetObject<string>("TokenTele_" + msg.Chat.Id);
             var profile = await helperApi.CallApiAsync("" + Domain + "/api/services/app/account/GetProfile", RestSharp.Method.Post, authorize: string.IsNullOrEmpty(token) ? "expired" : token);
             var profileDto = JsonConvert.DeserializeObject<ResultProfile>(profile);
@@ -235,10 +289,10 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
                 List<List<InlineKeyboardButton>> buttons =
             [
                 [
-                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                    InlineKeyboardButton.WithCallbackData(L(TranslateLanguage, lang, "Close"), "CLOSE_&_"+msg.MessageId)
                 ],
             ];
-                await bot.SendTextMessageAsync(msg.Chat, "Wallet: " + profileDto.Result.Balance, replyMarkup: new InlineKeyboardMarkup(buttons));
+                await bot.SendTextMessageAsync(msg.Chat, ""+ L(TranslateLanguage, lang, "Wallet") + ": " + profileDto.Result.Balance, replyMarkup: new InlineKeyboardMarkup(buttons));
                 await bot.DeleteMessageAsync(msg.Chat, msg.MessageId);
             }
             else
@@ -264,6 +318,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     #region Game => lấy ở trang chủ web
     async Task OnCommandGame(Message msg, string platform = "", string gametype = "", string type = "", bool isLive = false)
     {
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
         var game = await helperApi.CallApiAsync("" + Domain + "/api/MPS/ByGameTypeAndPlatform", RestSharp.Method.Post, new { platform = isLive ? "" : platform, gametype = isLive ? "" : gametype, status = type.Contains("games") ? "HOT" : "", tenancyName = "dhdemo" });
         var gameDto = JsonConvert.DeserializeObject<ResultListGame>(game);
         List<List<InlineKeyboardButton>> buttons;
@@ -277,9 +332,9 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
                 buttons = ConvertToInlineKeyboard(gameDto.result.gameList.Take(10).ToDictionary(x => "GAME/LIST_&_" + x.game_code + "_*_" + x.platform + "_*_" + x.rtp, x => "🔥" + x.game_name_en), buttonsPerRow: 2);
                 buttons.Add(new List<InlineKeyboardButton>
                 {
-                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                    InlineKeyboardButton.WithCallbackData(L(TranslateLanguage, lang, "Close"), "CLOSE_&_"+msg.MessageId)
                 });
-                await bot.SendTextMessageAsync(msg.Chat.Id, "Game list (" + gameDto.result.gameList.FirstOrDefault().game_type + " - " + gameDto.result.gameList.FirstOrDefault().platform + ")", replyMarkup: new InlineKeyboardMarkup(buttons));
+                await bot.SendTextMessageAsync(msg.Chat.Id, ""+ L(TranslateLanguage, lang, "GameList") + " (" + gameDto.result.gameList.FirstOrDefault().game_type + " - " + gameDto.result.gameList.FirstOrDefault().platform + ")", replyMarkup: new InlineKeyboardMarkup(buttons));
             }
             else
             {
@@ -287,9 +342,9 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
                 buttons = ConvertToInlineKeyboard(platforms.ToDictionary(x => "GAME/PLATFORM_&_" + type.Split("/").LastOrDefault() + "_*_" + x.platform, x => "🔹" + x.platform_name), buttonsPerRow: 2);
                 buttons.Add(new List<InlineKeyboardButton>
                 {
-                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                    InlineKeyboardButton.WithCallbackData(L(TranslateLanguage, lang, "Close"), "CLOSE_&_"+msg.MessageId)
                 });
-                await bot.SendTextMessageAsync(msg.Chat.Id, "List provider (" + type.Split("/").LastOrDefault() + ")", replyMarkup: new InlineKeyboardMarkup(buttons));
+                await bot.SendTextMessageAsync(msg.Chat.Id, ""+ L(TranslateLanguage, lang, "ListProvider") + " (" + type.Split("/").LastOrDefault() + ")", replyMarkup: new InlineKeyboardMarkup(buttons));
             }
         }
         else if (type.Contains("games"))
@@ -298,9 +353,9 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
             buttons = ConvertToInlineKeyboard(gameDto.result.gameList.Take(10).ToDictionary(x => "GAME/LIST_&_" + x.game_code + "_*_" + x.platform + "_*_" + x.rtp, x => "🔥" + x.game_name_en), buttonsPerRow: 2);
             buttons.Add(new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                InlineKeyboardButton.WithCallbackData(L(TranslateLanguage, lang, "Close"), "CLOSE_&_"+msg.MessageId)
             });
-            await bot.SendTextMessageAsync(msg.Chat.Id, "Game list (" + gameDto.result.gameList.FirstOrDefault().game_type + " - " + gameDto.result.gameList.FirstOrDefault().platform + ")", replyMarkup: new InlineKeyboardMarkup(buttons));
+            await bot.SendTextMessageAsync(msg.Chat.Id, ""+ L(TranslateLanguage, lang, "GameList") + " (" + gameDto.result.gameList.FirstOrDefault().game_type + " - " + gameDto.result.gameList.FirstOrDefault().platform + ")", replyMarkup: new InlineKeyboardMarkup(buttons));
 
         }
         else
@@ -308,9 +363,9 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
             buttons = ConvertToInlineKeyboard(gameDto.result.gameType.ToDictionary(x => "GAME/TYPE_&_" + x.game_type, x => x.game_type_name), buttonsPerRow: 2);
             buttons.Add(new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                InlineKeyboardButton.WithCallbackData(L(TranslateLanguage, lang, "Close"), "CLOSE_&_"+msg.MessageId)
             });
-            await bot.SendTextMessageAsync(msg.Chat.Id, "Game Type", replyMarkup: new InlineKeyboardMarkup(buttons));
+            await bot.SendTextMessageAsync(msg.Chat.Id, L(TranslateLanguage, lang, "GameType"), replyMarkup: new InlineKeyboardMarkup(buttons));
         }
         await bot.DeleteMessageAsync(msg.Chat, msg.MessageId);
     }
@@ -319,14 +374,15 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     #region Detail game
     async Task OnCommandDetailGame(Message msg, string gamecode, string platform, string imageUrl, string gamename, string rtp, string gametype)
     {
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
         var token = RedisCacher.GetObject<string>("TokenTele_" + msg.Chat.Id);
         var game = await helperApi.CallApiAsync("" + Domain + "/api/MPS/GetMPSGameUrl", RestSharp.Method.Post, new { game_code = gamecode, platform = platform }, authorize: string.IsNullOrEmpty(token) ? "expired" : token);
         var gameDto = JsonConvert.DeserializeObject<ResultString>(game);
         List<List<InlineKeyboardButton>> buttons =
             [
                 [
-                    InlineKeyboardButton.WithWebApp("Play", gameDto.Result),
-                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                    InlineKeyboardButton.WithWebApp(L(TranslateLanguage, lang, "Play"), gameDto.Result),
+                    InlineKeyboardButton.WithCallbackData(L(TranslateLanguage, lang, "Close"), "CLOSE_&_"+msg.MessageId)
                 ],
             ];
         //await bot.SendChatActionAsync(msg.Chat, ChatAction.UploadPhoto);
@@ -334,7 +390,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
         //await using (var fileStream = new FileStream("C:\\Users\\wood\\Downloads\\photo_2024-07-29_17-20-52.jpg", FileMode.Open, FileAccess.Read))
         //{
         //}
-        await bot.SendTextMessageAsync(msg.Chat, "Game name: " + gamename + "\nGame Type: " + gametype + (Convert.ToDouble(rtp) > 0 ? "\nRTP: " + rtp + "%" : ""), replyMarkup: new InlineKeyboardMarkup(buttons));
+        await bot.SendTextMessageAsync(msg.Chat, ""+L(TranslateLanguage, lang, "GameName")+": " + gamename + "\n"+L(TranslateLanguage, lang, "GameType")+": " + gametype + (Convert.ToDouble(rtp) > 0 ? "\n"+L(TranslateLanguage, lang, "RTP")+": " + rtp + "%" : ""), replyMarkup: new InlineKeyboardMarkup(buttons));
         await bot.DeleteMessageAsync(msg.Chat, msg.MessageId);
 
     }
@@ -343,15 +399,16 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     #region Deposit
     async Task OnCommandDeposit(Message msg)
     {
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
         var token = RedisCacher.GetObject<string>("TokenTele_" + msg.Chat.Id);
         List<List<InlineKeyboardButton>> buttons =
             [
                 [
-                    InlineKeyboardButton.WithWebApp("Deposit", ""+Domain+"/TelegramBots/Deposit?token="+(string.IsNullOrEmpty(token) ? "expired" : token)+"&tenancyName="+TenancyName),
-                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                    InlineKeyboardButton.WithWebApp(L(TranslateLanguage, lang, "Deposit"), ""+Domain+"/TelegramBots/Deposit?lang="+lang+"&token="+(string.IsNullOrEmpty(token) ? "expired" : token)+"&tenancyName="+TenancyName),
+                    InlineKeyboardButton.WithCallbackData(L(TranslateLanguage, lang, "Close"), "CLOSE_&_"+msg.MessageId)
                 ],
             ];
-        var sendMessage = await bot.SendTextMessageAsync(msg.Chat, "Click to deposit", replyMarkup: new InlineKeyboardMarkup(buttons));
+        var sendMessage = await bot.SendTextMessageAsync(msg.Chat, L(TranslateLanguage, lang, "ClickToDeposit"), replyMarkup: new InlineKeyboardMarkup(buttons));
         if (!string.IsNullOrEmpty(RedisCacher.GetObject<string>("LASTMESSAGEID_" + msg.Chat.Id)))
         {
             RedisCacher.KeyDelete("LASTMESSAGEID_" + msg.Chat.Id);
@@ -365,15 +422,16 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     #region Withdraw
     async Task OnCommandWithdraw(Message msg)
     {
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
         var token = RedisCacher.GetObject<string>("TokenTele_" + msg.Chat.Id);
         List<List<InlineKeyboardButton>> buttons =
             [
                 [
-                    InlineKeyboardButton.WithWebApp("Withdraw", ""+Domain+"/TelegramBots/Withdraw?token="+(string.IsNullOrEmpty(token) ? "expired" : token)+"&tenancyName="+TenancyName),
-                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                    InlineKeyboardButton.WithWebApp(L(TranslateLanguage, lang, "Withdraw"), ""+Domain+"/TelegramBots/Withdraw?lang="+lang+"&token="+(string.IsNullOrEmpty(token) ? "expired" : token)+"&tenancyName="+TenancyName),
+                    InlineKeyboardButton.WithCallbackData(L(TranslateLanguage, lang, "Close"), "CLOSE_&_"+msg.MessageId)
                 ],
             ];
-        var sendMessage = await bot.SendTextMessageAsync(msg.Chat, "Click to withdraw", replyMarkup: new InlineKeyboardMarkup(buttons));
+        var sendMessage = await bot.SendTextMessageAsync(msg.Chat, L(TranslateLanguage, lang, "ClickToWithdraw"), replyMarkup: new InlineKeyboardMarkup(buttons));
         if (!string.IsNullOrEmpty(RedisCacher.GetObject<string>("LASTMESSAGEID_" + msg.Chat.Id)))
         {
             RedisCacher.KeyDelete("LASTMESSAGEID_" + msg.Chat.Id);
@@ -386,15 +444,16 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     #region Promotion
     async Task OnCommandPromotion(Message msg)
     {
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
         var token = RedisCacher.GetObject<string>("TokenTele_" + msg.Chat.Id);
         List<List<InlineKeyboardButton>> buttons =
             [
                 [
-                    InlineKeyboardButton.WithWebApp("Promotion", ""+Domain+"/TelegramBots/Promotion?token="+(string.IsNullOrEmpty(token) ? "expired" : token)+"&tenancyName="+TenancyName),
-                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                    InlineKeyboardButton.WithWebApp(L(TranslateLanguage, lang, "Promotion"), ""+Domain+"/TelegramBots/Promotion?lang="+lang+"&token="+(string.IsNullOrEmpty(token) ? "expired" : token)+"&tenancyName="+TenancyName),
+                    InlineKeyboardButton.WithCallbackData(L(TranslateLanguage, lang, "Close"), "CLOSE_&_"+msg.MessageId)
                 ],
             ];
-        var sendMessage = await bot.SendTextMessageAsync(msg.Chat, "Click to promotion", replyMarkup: new InlineKeyboardMarkup(buttons));
+        var sendMessage = await bot.SendTextMessageAsync(msg.Chat, L(TranslateLanguage, lang, "ClickToPromotion"), replyMarkup: new InlineKeyboardMarkup(buttons));
         if (!string.IsNullOrEmpty(RedisCacher.GetObject<string>("LASTMESSAGEID_" + msg.Chat.Id)))
         {
             RedisCacher.KeyDelete("LASTMESSAGEID_" + msg.Chat.Id);
@@ -407,15 +466,16 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     #region History
     async Task OnCommandHistory(Message msg)
     {
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
         var token = RedisCacher.GetObject<string>("TokenTele_" + msg.Chat.Id);
         List<List<InlineKeyboardButton>> buttons =
             [
                 [
-                    InlineKeyboardButton.WithWebApp("History", ""+Domain+"/TelegramBots/History?token="+(string.IsNullOrEmpty(token) ? "expired" : token)+"&tenancyName="+TenancyName),
-                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                    InlineKeyboardButton.WithWebApp(L(TranslateLanguage, lang, "History"), ""+Domain+"/TelegramBots/History?lang="+lang+"&token="+(string.IsNullOrEmpty(token) ? "expired" : token)+"&tenancyName="+TenancyName),
+                    InlineKeyboardButton.WithCallbackData(L(TranslateLanguage, lang, "Close"), "CLOSE_&_"+msg.MessageId)
                 ],
             ];
-        var sendMessage = await bot.SendTextMessageAsync(msg.Chat, "Click to history", replyMarkup: new InlineKeyboardMarkup(buttons));
+        var sendMessage = await bot.SendTextMessageAsync(msg.Chat, L(TranslateLanguage, lang, "ClickToHistory"), replyMarkup: new InlineKeyboardMarkup(buttons));
         if (!string.IsNullOrEmpty(RedisCacher.GetObject<string>("LASTMESSAGEID_" + msg.Chat.Id)))
         {
             RedisCacher.KeyDelete("LASTMESSAGEID_" + msg.Chat.Id);
@@ -428,24 +488,26 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     #region Setting
     async Task OnCommandSetting(Message msg)
     {
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
         var replyKeyboard = new ReplyKeyboardMarkup(new[]
         {
-        new KeyboardButton[] { "Support", "Language" },
-        new KeyboardButton[] { "Login To The Website" },
-        new KeyboardButton[] { "Change Password" },
-        new KeyboardButton[] { "Back" }
+        new KeyboardButton[] { L(TranslateLanguage, lang, "Support"), L(TranslateLanguage, lang, "Language") },
+        new KeyboardButton[] { L(TranslateLanguage, lang, "LoginToTheWebsite") },
+        new KeyboardButton[] { L(TranslateLanguage, lang, "ChangePassword") },
+        new KeyboardButton[] { L(TranslateLanguage, lang, "Back") }
     })
         {
             ResizeKeyboard = true,
             OneTimeKeyboard = false //true để ẩn bàn phím
         };
-        await bot.SendTextMessageAsync(chatId: msg.Chat, text: "Choose a option:", replyMarkup: replyKeyboard);
+        await bot.SendTextMessageAsync(chatId: msg.Chat, text: L(TranslateLanguage, lang, "ChooseAOption"), replyMarkup: replyKeyboard);
     }
     #endregion
 
     #region Support
     async Task OnCommandSupport(Message msg)
     {
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
         var buttons = new InlineKeyboardButton[][]
         {
             new []
@@ -455,32 +517,37 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
             }
         };
 
-        await bot.SendTextMessageAsync(chatId: msg.Chat.Id, text: "Channel support:", replyMarkup: new InlineKeyboardMarkup(buttons));
+        await bot.SendTextMessageAsync(chatId: msg.Chat.Id, text: L(TranslateLanguage, lang, "ChannelSupport"), replyMarkup: new InlineKeyboardMarkup(buttons));
     }
     #endregion
 
     #region Language
     async Task OnCommandLanguage(Message msg)
     {
-        var buttons = new InlineKeyboardButton[][]
-        {
-            new []
-            {
-                InlineKeyboardButton.WithCallbackData("Vietnam", "set_language_vietnam"),
-                InlineKeyboardButton.WithCallbackData("English", "set_language_english")
-            }
-        };
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
+        var languages = RedisCacher.GetObject<List<CurrentCulture>>("LIST_LANGUAGE_" + bot.BotId);
+        List<List<InlineKeyboardButton>> buttons;
+        buttons = ConvertToInlineKeyboard(languages.ToDictionary(x => "LANGUAGE_&_" + x.Name, x => x.DisplayName), buttonsPerRow: 2);
 
-        await bot.SendTextMessageAsync(chatId: msg.Chat.Id, text: "Language selection:", replyMarkup: new InlineKeyboardMarkup(buttons));
+        await bot.SendTextMessageAsync(chatId: msg.Chat.Id, text: L(TranslateLanguage, lang, "LanguageSelection"), replyMarkup: new InlineKeyboardMarkup(buttons));
+    }
+
+    string L(object json, string lang, string key)
+    {
+        var values = JObject.Parse(json.ToString());
+        var value = values?[lang];
+        return value.Value<string?>(char.ToLower(key[0]) + key.Substring(1)) ?? key;
+
     }
     #endregion
 
     #region Login to website
     async Task OnCommandWebsite(Message msg)
     {
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
         var token = RedisCacher.GetObject<string>("TokenTele_" + msg.Chat.Id);
-        string message = "Click on the text below to continue to the site\n";
-        message += "<a href=\"https://staging.my388.com?t=" + (string.IsNullOrEmpty(token) ? "expired" : token) + "\">Log in to the website</a>";
+        string message = L(TranslateLanguage, lang, "ClickOnTheTextBelowToContinueToTheSite") + "\n";
+        message += "<a href=\"https://staging.my388.com?t=" + (string.IsNullOrEmpty(token) ? "expired" : token) + "\">"+ L(TranslateLanguage, lang, "LogInToTheWebsite") + "</a>";
 
         await bot.SendTextMessageAsync(chatId: msg.Chat.Id, text: message, parseMode: ParseMode.Html);
     }
@@ -489,15 +556,16 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     #region Change Password
     async Task OnCommandChangePassword(Message msg)
     {
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
         var token = RedisCacher.GetObject<string>("TokenTele_" + msg.Chat.Id);
         List<List<InlineKeyboardButton>> buttons =
             [
                 [
-                    InlineKeyboardButton.WithWebApp("Change password", ""+Domain+"/TelegramBots/ChangePassword?token="+(string.IsNullOrEmpty(token) ? "expired" : token)+"&tenancyName="+TenancyName),
-                    InlineKeyboardButton.WithCallbackData("Close", "CLOSE_&_"+msg.MessageId)
+                    InlineKeyboardButton.WithWebApp(L(TranslateLanguage, lang, "ChangePassword"), ""+Domain+"/TelegramBots/ChangePassword?lang="+lang+"&token="+(string.IsNullOrEmpty(token) ? "expired" : token)+"&tenancyName="+TenancyName),
+                    InlineKeyboardButton.WithCallbackData(L(TranslateLanguage, lang, "Close"), "CLOSE_&_"+msg.MessageId)
                 ],
             ];
-        var sendMessage = await bot.SendTextMessageAsync(msg.Chat, "Click to change password", replyMarkup: new InlineKeyboardMarkup(buttons));
+        var sendMessage = await bot.SendTextMessageAsync(msg.Chat, L(TranslateLanguage, lang, "ClickToChangePassword"), replyMarkup: new InlineKeyboardMarkup(buttons));
         if (!string.IsNullOrEmpty(RedisCacher.GetObject<string>("LASTMESSAGEID_" + msg.Chat.Id)))
         {
             RedisCacher.KeyDelete("LASTMESSAGEID_" + msg.Chat.Id);
@@ -510,6 +578,8 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     #region Contact
     async Task OnCommandContact(Message msg)
     {
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
+        logger.LogInformation(lang);
         var randomPass = GeneratePassword(12);
         logger.LogInformation("tenancyName: " + TenancyName);
         var objRegister = new
@@ -557,7 +627,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
         var loginDto = JsonConvert.DeserializeObject<ResultLogin>(login);
         if (loginDto.Success)
         {
-            await bot.SendTextMessageAsync(msg.Chat, "Welcome, " + loginDto.Result.UserName);
+            await bot.SendTextMessageAsync(msg.Chat, L(TranslateLanguage, lang, "Welcome") +", " + loginDto.Result.UserName);
             RedisCacher.SetObject("TokenTele_" + msg.Chat.Id, loginDto.Result.Token, 1440);
             await OnCommandHome(msg);
         }
@@ -569,18 +639,20 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
                 var registerDto = JsonConvert.DeserializeObject<ResultLogin>(register);
                 if (registerDto.Success)
                 {
-                    await bot.SendTextMessageAsync(msg.Chat, "Welcome, " + msg.Contact.PhoneNumber.Replace("+", ""));
+                    await bot.SendTextMessageAsync(msg.Chat, L(TranslateLanguage, lang, "Welcome") + ", " + msg.Contact.PhoneNumber.Replace("+", ""));
                     RedisCacher.SetObject("TokenTele_" + msg.Chat.Id, registerDto.Result.Token, 1440);
                     await OnCommandHome(msg, randomPass);
                 }
                 else
                 {
                     await bot.SendTextMessageAsync(msg.Chat, registerDto.Error.Message);
+                    await OnCommandSignInSignUp(msg);
                 }
             }
             else
             {
                 await bot.SendTextMessageAsync(msg.Chat, loginDto.Error.Message);
+                await OnCommandSignInSignUp(msg);
             }
         }
 
@@ -613,21 +685,31 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     }
     #endregion
 
-    async Task<Message> Usage(Message msg)
+    async Task Usage(Message msg)
     {
-        const string usage = """
-                <b><u>Bot menu</u></b>:
-                /photo          - send a photo
-                /inline_buttons - send inline buttons
-                /keyboard       - send keyboard buttons
-                /remove         - remove keyboard buttons
-                /request        - request location or contact
-                /inline_mode    - send inline-mode results list
-                /poll           - send a poll
-                /poll_anonymous - send an anonymous poll
-                /throw          - what happens if handler fails
-            """;
-        return await bot.SendTextMessageAsync(msg.Chat, usage, parseMode: ParseMode.Html, replyMarkup: new ReplyKeyboardRemove());
+        //const string usage = """
+        //        <b><u>Bot menu</u></b>:
+        //        /photo          - send a photo
+        //        /inline_buttons - send inline buttons
+        //        /keyboard       - send keyboard buttons
+        //        /remove         - remove keyboard buttons
+        //        /request        - request location or contact
+        //        /inline_mode    - send inline-mode results list
+        //        /poll           - send a poll
+        //        /poll_anonymous - send an anonymous poll
+        //        /throw          - what happens if handler fails
+        //    """;
+        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + msg.Chat.Id) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
+        var token = RedisCacher.GetObject<string>("TokenTele_" + msg.Chat.Id);
+        await bot.SendTextMessageAsync(msg.Chat, L(TranslateLanguage, lang, "IncorrectOperationPleaseTryAgain"), replyMarkup: new ReplyKeyboardRemove());
+        if (string.IsNullOrEmpty(token))
+        {
+            await OnCommandSignInSignUp(msg);
+        }
+        else
+        {
+            await OnCommandHome(msg);
+        }
     }
 
     async Task<Message> SendPhoto(Message msg)
@@ -744,6 +826,13 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
                         var rtp = splitString[2];
                         var game = games.result.gameList.FirstOrDefault(x => x.game_code == gamecode && x.platform == platform);
                         await OnCommandDetailGame(callbackQuery.Message, gamecode, platform, game.imageURL, game.game_name_en, rtp, game.game_type);
+                    }
+                    else if (value.Contains("LANGUAGE"))
+                    {
+                        var lang = RedisCacher.GetObject<string>("LANGUAGE_" + chatId) ?? RedisCacher.GetObject<string>("MAIN_LANGUAGE_" + bot.BotId);
+                        RedisCacher.SetObject("LANGUAGE_" + chatId, stringSplit.LastOrDefault(), 21600);
+                        await bot.SendTextMessageAsync(chatId, L(TranslateLanguage, stringSplit.LastOrDefault(), "Setting"));
+                        await OnCommandSetting(callbackQuery.Message);
                     }
                     break;
 
